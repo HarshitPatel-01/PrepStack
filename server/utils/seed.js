@@ -6,7 +6,7 @@ dotenv.config();
 const problems = [
   {
     title: "Two Sum",
-    description: "Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target. You may assume that each input would have exactly one solution, and you may not use the same element twice.",
+    description: "Given an array of integers `nums` and an integer `target`, return indices of the two numbers such that they add up to `target`.\n\nYou may assume that each input would have exactly one solution, and you may not use the same element twice. You can return the answer in any order.\n\n**Constraints:**\n* `2 <= nums.length <= 10^4`\n* `-10^9 <= nums[i] <= 10^9`\n* `-10^9 <= target <= 10^9`\n* Only one valid answer exists.",
     difficulty: "Easy",
     category: "Array",
     order: 1,
@@ -28,12 +28,13 @@ const problems = [
       { input: "[2,7,11,15], 9",  output: "[0,1]", explanation: "nums[0] + nums[1] == 9" },
       { input: "[3,2,4], 6",      output: "[1,2]", explanation: "nums[1] + nums[2] == 6" },
       { input: "[3,3], 6",        output: "[0,1]", explanation: "" },
-      { input: "[1,5,3,9,4], 12", output: "[2,3]", explanation: "" }
+      { input: "[1,5,3,9,4], 12", output: "[2,3]", explanation: "" },
+      { input: "[3,2,3], 6",      output: "[0,2]", explanation: "Elements at index 0 and 2 add up to 6" }
     ]
   },
   {
     title: "Best Time to Buy and Sell Stock",
-    description: "You are given an array prices where prices[i] is the price of a given stock on the ith day. You want to maximize your profit by choosing a single day to buy and a single day to sell in the future. Return the maximum profit. If no profit, return 0.",
+    description: "You are given an array `prices` where `prices[i]` is the price of a given stock on the `i`th day.\n\nYou want to maximize your profit by choosing a **single day** to buy one stock and choosing a **different day in the future** to sell that stock.\n\nReturn the maximum profit you can achieve from this transaction. If you cannot achieve any profit, return `0`.\n\n**Constraints:**\n* `1 <= prices.length <= 10^5`\n* `0 <= prices[i] <= 10^4`",
     difficulty: "Easy",
     category: "Array",
     order: 2,
@@ -55,12 +56,13 @@ const problems = [
       { input: "[7,1,5,3,6,4]", output: "5",  explanation: "Buy day 2, sell day 5" },
       { input: "[7,6,4,3,1]",   output: "0",  explanation: "No profit possible" },
       { input: "[1,2]",          output: "1",  explanation: "" },
-      { input: "[2,4,1]",        output: "2",  explanation: "" }
+      { input: "[2,4,1]",        output: "2",  explanation: "" },
+      { input: "[1,2,3,4,5]",    output: "4",  explanation: "Buy on day 1 (price=1) and sell on day 5 (price=5)" }
     ]
   },
   {
     title: "Contains Duplicate",
-    description: "Given an integer array nums, return true if any value appears at least twice in the array, and return false if every element is distinct.",
+    description: "Given an integer array `nums`, return `true` if any value appears **at least twice** in the array, and return `false` if every element is distinct.\n\n**Constraints:**\n* `1 <= nums.length <= 10^5`\n* `-10^9 <= nums[i] <= 10^9`",
     difficulty: "Easy",
     category: "Array",
     order: 3,
@@ -81,12 +83,14 @@ const problems = [
     testCases: [
       { input: "[1,2,3,1]",     output: "true",  explanation: "" },
       { input: "[1,2,3,4]",     output: "false", explanation: "" },
-      { input: "[1,1,1,3,3,4,3,2,4,2]", output: "true", explanation: "" }
+      { input: "[1,1,1,3,3,4,3,2,4,2]", output: "true", explanation: "" },
+      { input: "[0,4,5,0,3,6]", output: "true",  explanation: "" },
+      { input: "[1]",           output: "false", explanation: "Array of size 1 cannot have duplicates." }
     ]
   },
   {
     title: "Maximum Subarray",
-    description: "Given an integer array nums, find the subarray with the largest sum, and return its sum. (Kadane's Algorithm)",
+    description: "Given an integer array `nums`, find the subarray (a contiguous non-empty sequence of elements within an array) with the largest sum, and return its sum.\n\n**Constraints:**\n* `1 <= nums.length <= 10^5`\n* `-10^4 <= nums[i] <= 10^4`",
     difficulty: "Medium",
     category: "Array",
     order: 4,
@@ -107,12 +111,14 @@ const problems = [
     testCases: [
       { input: "[-2,1,-3,4,-1,2,1,-5,4]", output: "6",  explanation: "[4,-1,2,1] has the largest sum = 6" },
       { input: "[1]",                      output: "1",  explanation: "" },
-      { input: "[5,4,-1,7,8]",             output: "23", explanation: "" }
+      { input: "[5,4,-1,7,8]",             output: "23", explanation: "" },
+      { input: "[-1]",                     output: "-1", explanation: "" },
+      { input: "[-2,-1]",                  output: "-1", explanation: "The maximum is the single element -1" }
     ]
   },
   {
     title: "Valid Parentheses",
-    description: "Given a string s containing just the characters '(', ')', '{', '}', '[' and ']', determine if the input string is valid. Brackets must close in the correct order.",
+    description: "Given a string `s` containing just the characters `'('`, `')'`, `'{'`, `'}'`, `'['` and `']'`, determine if the input string is valid.\n\nAn input string is valid if:\n1. Open brackets must be closed by the same type of brackets.\n2. Open brackets must be closed in the correct order.\n3. Every close bracket has a corresponding open bracket of the same type.\n\n**Constraints:**\n* `1 <= s.length <= 10^4`\n* `s` consists of parentheses only `'()[]{}'`.",
     difficulty: "Easy",
     category: "Stack",
     order: 5,
@@ -134,12 +140,13 @@ const problems = [
       { input: '"()"',    output: "true",  explanation: "" },
       { input: '"()[]{}"', output: "true", explanation: "" },
       { input: '"(]"',    output: "false", explanation: "" },
-      { input: '"([)]"',  output: "false", explanation: "" }
+      { input: '"([)]"',  output: "false", explanation: "" },
+      { input: '"[({(())}[()])]"', output: "true", explanation: "Complex nested structure." }
     ]
   },
   {
     title: "Climbing Stairs",
-    description: "You are climbing a staircase. It takes n steps to reach the top. Each time you can either climb 1 or 2 steps. In how many distinct ways can you climb to the top?",
+    description: "You are climbing a staircase. It takes `n` steps to reach the top.\n\nEach time you can either climb `1` or `2` steps. In how many distinct ways can you climb to the top?\n\n**Constraints:**\n* `1 <= n <= 45`",
     difficulty: "Easy",
     category: "Dynamic Programming",
     order: 6,
@@ -160,7 +167,9 @@ const problems = [
     testCases: [
       { input: "2", output: "2", explanation: "1+1 or 2" },
       { input: "3", output: "3", explanation: "1+1+1, 1+2, 2+1" },
-      { input: "5", output: "8", explanation: "" }
+      { input: "5", output: "8", explanation: "" },
+      { input: "1", output: "1", explanation: "Only 1 step needed." },
+      { input: "4", output: "5", explanation: "1+1+1+1, 1+1+2, 1+2+1, 2+1+1, 2+2" }
     ]
   }
 ];

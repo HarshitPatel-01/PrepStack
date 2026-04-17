@@ -32,7 +32,11 @@ const Login = () => {
         setError(data.message);
       }
     } catch (err) {
-      setError('Something went wrong');
+      if (err.message === 'Failed to fetch') {
+        setError('Network error: Could not connect to the server.');
+      } else {
+        setError(err.message || 'Something went wrong');
+      }
     } finally {
       setLoading(false);
     }

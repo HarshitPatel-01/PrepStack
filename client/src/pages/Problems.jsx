@@ -11,7 +11,29 @@ const Problems = () => {
   const [difficultyFilter, setDifficultyFilter] = useState('All');
   const [tagFilter, setTagFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
+
+  const handleToggleStatus = async (e, problemId) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!user) return alert("Please log in to track progress");
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:5000/api/auth/toggle-problem`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ problemId })
+      });
+      if (response.ok) {
+        refreshUser();
+      }
+    } catch (err) {
+      console.error("Failed to toggle problem status:", err);
+    }
+  };
 
   useEffect(() => {
     const fetchProblems = async () => {
@@ -111,7 +133,10 @@ const Problems = () => {
               return (
                 <Link to={`/problem/${p._id}`} key={p._id} className="problem-row">
                   <span className="col-status">
-                    <div className={`status-radio ${isSolved ? 'checked' : ''}`}>
+                    <div 
+                      className={`status-radio ${isSolved ? 'checked' : ''}`}
+                      onClick={(e) => handleToggleStatus(e, p._id)}
+                    >
                       {isSolved && <div className="radio-inner" />}
                     </div>
                   </span>
@@ -129,35 +154,24 @@ const Problems = () => {
           <div className="progress-card glass">
             <h3>Progress</h3>
             <div className="progress-stats">
-              <div className="stat-item">
-                <div className="stat-header">
-                  <span>Easy</span>
-                  <span>12/15</span>
-                </div>
-                <div className="progress-bar"><div className="bar easy" style={{width: '80%'}}></div></div>
-              </div>
-              <div className="stat-item">
-                <div className="stat-header">
-                  <span>Medium</span>
-                  <span>4/20</span>
-                </div>
-                <div className="progress-bar"><div className="bar medium" style={{width: '20%'}}></div></div>
-              </div>
-              <div className="stat-item">
-                <div className="stat-header">
-                  <span>Hard</span>
-                  <span>1/10</span>
-                </div>
-                <div className="progress-bar"><div className="bar hard" style={{width: '10%'}}></div></div>
-              </div>
+              {['Easy', 'Medium', 'Hard'].map(diff => {
+                const total = problems.filter(p => p.difficulty === diff).length;
+                const solved = problems.filter(p => p.difficulty === diff && user?.solvedProblems?.includes(p._id)).length;
+                const percent = total === 0 ? 0 : Math.round((solved / total) * 100);
+                
+                return (
+                  <div className="stat-item" key={diff}>
+                    <div className="stat-header">
+                      <span>{diff}</span>
+                      <span>{solved}/{total}</span>
+                    </div>
+                    <div className="progress-bar">
+                      <div className={`bar ${diff.toLowerCase()}`} style={{width: `${percent}%`}}></div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          </div>
-
-          <div className="challenge-card glass">
-            <div className="challenge-tag">PREMIUM WEEKLY</div>
-            <h4>30 Days of JavaScript</h4>
-            <p>Master JavaScript basics with our curated challenge.</p>
-            <button className="challenge-btn" onClick={() => alert('Redirecting to JavaScript challenge...')}>Start Now</button>
           </div>
         </aside>
       </div>

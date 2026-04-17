@@ -24,7 +24,7 @@ const executeCode = (language, code) => {
             const outFile = path.join(tempDir, `${jobId}.exe`);
             fs.writeFileSync(srcFile, code, 'utf8');
             
-            exec(`g++ -std=c++17 "${srcFile}" -o "${outFile}"`, opts, (compileErr, _, compileStderr) => {
+            exec(`g++ -std=c++17 -O2 -Wall -Wextra "${srcFile}" -o "${outFile}"`, opts, (compileErr, _, compileStderr) => {
                 if (compileErr) {
                     cleanup(srcFile, outFile);
                     return resolve({ success: false, error: `Compilation Error:\n${compileStderr}` });
@@ -44,7 +44,7 @@ const executeCode = (language, code) => {
             const outFile = path.join(tempDir, `${jobId}.exe`);
             fs.writeFileSync(srcFile, code, 'utf8');
 
-            exec(`gcc "${srcFile}" -o "${outFile}"`, opts, (compileErr, _, compileStderr) => {
+            exec(`gcc -O2 -Wall -Wextra "${srcFile}" -o "${outFile}"`, opts, (compileErr, _, compileStderr) => {
                 if (compileErr) {
                     cleanup(srcFile, outFile);
                     return resolve({ success: false, error: `Compilation Error:\n${compileStderr}` });

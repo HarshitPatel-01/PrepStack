@@ -17,6 +17,49 @@ const Workspace = () => {
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState(null);
   const [activeCase, setActiveCase] = useState(0);
+  const [editorFlex, setEditorFlex] = useState(60);
+  const [leftWidth, setLeftWidth] = useState(450); // initial 450px
+
+  const startDragHorizontal = (e) => {
+    e.preventDefault();
+    const handleMouseMove = (mouseEvent) => {
+       const newWidth = mouseEvent.clientX;
+       if (newWidth > 300 && newWidth < window.innerWidth - 300) {
+          setLeftWidth(newWidth);
+       }
+    };
+    const handleMouseUp = () => {
+       document.removeEventListener('mousemove', handleMouseMove);
+       document.removeEventListener('mouseup', handleMouseUp);
+       document.body.style.cursor = 'default';
+    };
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    document.body.style.cursor = 'ew-resize';
+  };
+
+  const startDrag = (e) => {
+    e.preventDefault();
+    const handleMouseMove = (mouseEvent) => {
+       const container = document.querySelector('.workspace-right');
+       if (container) {
+         const rect = container.getBoundingClientRect();
+         // Height from top divided by total height
+         const newFlex = ((mouseEvent.clientY - rect.top) / rect.height) * 100;
+         if (newFlex > 10 && newFlex < 90) {
+            setEditorFlex(newFlex);
+         }
+       }
+    };
+    const handleMouseUp = () => {
+       document.removeEventListener('mousemove', handleMouseMove);
+       document.removeEventListener('mouseup', handleMouseUp);
+       document.body.style.cursor = 'default';
+    };
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    document.body.style.cursor = 'ns-resize';
+  };
 
   // starterCodes from DB per problem
   const getStarterCode = (prob, lang) => {
@@ -93,12 +136,27 @@ const Workspace = () => {
     }
   };
 
+  const formatText = (text) => {
+    if(!text) return '';
+    const replacedBullets = text.replace(/^\* /gm, '• ');
+    const parts = replacedBullets.split(/(\*\*.*?\*\*|`.*?`)/g);
+    return parts.map((part, i) => {
+        if (part.startsWith('**') && part.endsWith('**')) {
+            return <strong key={i}>{part.slice(2, -2)}</strong>;
+        }
+        if (part.startsWith('`') && part.endsWith('`')) {
+            return <code key={i} style={{backgroundColor: '#2a2a2a', padding: '2px 4px', borderRadius: '4px', color: '#e2e8f0'}}>{part.slice(1, -1)}</code>;
+        }
+        return part;
+    });
+  };
+
   if (loading) return <div className="workspace-loading">Loading Workspace...</div>;
   if (!problem) return <div className="workspace-error">Problem not found</div>;
 
   return (
     <div className="workspace-container tuf-style">
-      <div className="workspace-left glass">
+      <div className="workspace-left glass" style={{ width: `${leftWidth}px`, flex: `0 0 ${leftWidth}px` }}>
         <div className="tab-header tuf-tabs">
           <button className={`tab-btn ${activeTab === 'description' ? 'active' : ''}`} onClick={() => setActiveTab('description')}><FileCode size={16} /> Description</button>
           <button className={`tab-btn ${activeTab === 'editorial' ? 'active' : ''}`} onClick={() => setActiveTab('editorial')}><Info size={16} /> Editorial</button>
@@ -135,21 +193,21 @@ const Workspace = () => {
               <div className="problem-title-section">
                 <h1>{problem.title}</h1>
                 <div className="problem-badges">
-                  <span className="badge tuf-blue">Subscribe to TUF+</span>
-                  <span className="badge muted">Hints</span>
-                  <span className="badge muted">Company</span>
                 </div>
               </div>
               
               <div className="problem-description-text">
-                <p>{problem.description}</p>
-                <div className="example-block">
-                  <h4>Example 1</h4>
-                  <div className="example-content">
-                    <p><strong>Input:</strong> {problem.testCases?.[0]?.input}</p>
-                    <p><strong>Output:</strong> {problem.testCases?.[0]?.output}</p>
+                <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.6', marginBottom: '20px' }}>{formatText(problem.description)}</div>
+                {problem.testCases?.slice(0, 3).map((tc, idx) => (
+                  <div key={idx} className="example-block">
+                    <h4>Example {idx + 1}</h4>
+                    <div className="example-content">
+                      <p><strong>Input:</strong> {tc.input}</p>
+                      <p><strong>Output:</strong> {tc.output}</p>
+                      {tc.explanation && <p><strong>Explanation:</strong> {tc.explanation}</p>}
+                    </div>
                   </div>
-                </div>
+                ))}
               </div>
             </>
           )}
@@ -160,8 +218,12 @@ const Workspace = () => {
         </div>
       </div>
 
+      <div className="horizontal-resizer-handle" onMouseDown={startDragHorizontal}>
+        <div className="horizontal-resizer-line"></div>
+      </div>
+
       <div className="workspace-right">
-        <div className="editor-section glass">
+        <div className="editor-section glass" style={{ flex: `${editorFlex} 1 0%` }}>
           <div className="editor-header tuf-header">
             <div className="lang-selector">
               <select 
@@ -199,31 +261,39 @@ const Workspace = () => {
           </div>
         </div>
 
-        <div className="testcase-section glass">
+        <div className="resizer-handle" onMouseDown={startDrag}>
+          <div className="resizer-line"></div>
+        </div>
+
+        <div className="testcase-section glass" style={{ flex: `${100 - editorFlex} 1 0%` }}>
           <div className="testcase-header tuf-header">
             <div className="header-left">
               <History size={16} className="text-muted" />
               <span>Test Cases</span>
             </div>
             <div className="header-right">
-               <button className="run-btn-tuf" onClick={handleRun}>Run</button>
             </div>
           </div>
 
           <div className="testcase-body">
             <div className="case-tabs">
-              {problem.testCases?.map((_, i) => (
+              {problem.testCases?.slice(0, 3).map((_, i) => (
                 <button key={i} className={`case-tab ${activeCase === i ? 'active' : ''}`} onClick={() => setActiveCase(i)}>Case {i + 1}</button>
               ))}
               <button className="add-btn">+</button>
-              <button className="reset-btn-link" onClick={() => setActiveCase(0)}><RotateCcw size={14} /> Reset</button>
             </div>
             <div className="case-content">
               {problem.testCases?.[activeCase] && (
-                <div className="input-field">
-                  <label>INPUT</label>
-                  <div className="input-box-tuf">{problem.testCases[activeCase].input}</div>
-                </div>
+                <>
+                  <div className="input-field">
+                    <label>INPUT</label>
+                    <div className="input-box-tuf">{problem.testCases[activeCase].input}</div>
+                  </div>
+                  <div className="input-field mt-3">
+                    <label>EXPECTED OUTPUT</label>
+                    <div className="input-box-tuf">{problem.testCases[activeCase].output}</div>
+                  </div>
+                </>
               )}
               {submitting && (
                 <div className="judging-loader">
