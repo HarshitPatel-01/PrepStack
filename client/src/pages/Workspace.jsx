@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import Editor from '@monaco-editor/react';
 import { Play, Send, Settings, RotateCcw, ChevronDown, Loader2, MessageCircle, Info, FileCode, History, Copy, Clock, Zap } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import './Workspace.css';
 
@@ -157,60 +158,140 @@ const Workspace = () => {
   return (
     <div className="workspace-container tuf-style">
       <div className="workspace-left glass" style={{ width: `${leftWidth}px`, flex: `0 0 ${leftWidth}px` }}>
-        <div className="tab-header tuf-tabs">
-          <button className={`tab-btn ${activeTab === 'description' ? 'active' : ''}`} onClick={() => setActiveTab('description')}><FileCode size={16} /> Description</button>
-          <button className={`tab-btn ${activeTab === 'editorial' ? 'active' : ''}`} onClick={() => setActiveTab('editorial')}><Info size={16} /> Editorial</button>
-          <button className={`tab-btn ${activeTab === 'submissions' ? 'active' : ''}`} onClick={() => setActiveTab('submissions')}><History size={16} /> Submissions</button>
-          <button className={`tab-btn ${activeTab === 'discussion' ? 'active' : ''}`} onClick={() => setActiveTab('discussion')}><MessageCircle size={16} /> Discussion</button>
+        <div className="tab-header tuf-tabs" style={{ display: 'flex', position: 'relative' }}>
+          {[
+            { id: 'description', label: 'Description', icon: FileCode },
+            { id: 'editorial', label: 'Process', icon: Info },
+            { id: 'dryrun', label: 'Dry Run', icon: Zap },
+            { id: 'submissions', label: 'Submissions', icon: History },
+            { id: 'discussion', label: 'Discussion', icon: MessageCircle }
+          ].map(tab => {
+            const Icon = tab.icon;
+            return (
+              <button 
+                key={tab.id}
+                className={`tab-btn ${activeTab === tab.id ? 'active' : ''}`} 
+                onClick={() => setActiveTab(tab.id)}
+                style={{ position: 'relative', outline: 'none' }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Icon size={16} /> {tab.label}
+                </div>
+                {activeTab === tab.id && (
+                  <motion.div
+                    layoutId="active-tab-indicator"
+                    initial={false}
+                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                    style={{
+                      position: 'absolute',
+                      bottom: -4,
+                      left: 0,
+                      right: 0,
+                      height: 2,
+                      backgroundColor: '#3b82f6',
+                      borderRadius: 2
+                    }}
+                  />
+                )}
+              </button>
+            )
+          })}
         </div>
 
         <div className="problem-content tuf-card">
-          {activeTab === 'editorial' && (
-            <div className="editorial-view">
-              <h2>Editorial</h2>
-              <div className="accordion-container">
-                <details open>
-                  <summary>Intuition</summary>
-                  <p>{problem.editorial?.intuition || "No intuition provided."}</p>
-                </details>
-                <details>
-                  <summary>Approach</summary>
-                  <p>{problem.editorial?.approach || "No approach provided."}</p>
-                </details>
-                <details>
-                  <summary>Complexity Analysis</summary>
-                  <p>{problem.editorial?.complexity || "Time: O(?), Space: O(?)"}</p>
-                </details>
-                <details>
-                  <summary>Code Solution</summary>
-                  <pre className="editorial-code"><code>{problem.editorial?.solutionCode || "// No solution code provided."}</code></pre>
-                </details>
-              </div>
-            </div>
-          )}
-          {activeTab === 'description' && (
-            <>
-              <div className="problem-title-section">
-                <h1>{problem.title}</h1>
-                <div className="problem-badges">
+          <div style={{ padding: '24px' }}>
+            {activeTab === 'editorial' && (
+              <div className="editorial-view">
+                <h2>Process</h2>
+                <div className="accordion-container">
+                  <details open>
+                    <summary>Intuition (No Hints)</summary>
+                    <p style={{ whiteSpace: 'pre-line' }}>{problem.editorial?.intuition || "No hints are provided. Formulate your foundational logic cleanly."}</p>
+                  </details>
+                  <details>
+                    <summary>Different ways to Approach</summary>
+                    <p style={{ whiteSpace: 'pre-line' }}>{problem.editorial?.approach || "Think about optimal and sub-optimal ways."}</p>
+                  </details>
+                  <details>
+                    <summary>Code Solution 🔒</summary>
+                    {result?.success ? (
+                      <pre className="editorial-code"><code>{problem.editorial?.solutionCode || "// No solution code provided."}</code></pre>
+                    ) : (
+                      <div style={{ padding: '20px', color: '#888', fontStyle: 'italic', background: '#151515', fontSize: '0.9rem', borderTop: '1px solid #333' }}>
+                         You must successfully submit a passing solution to unlock the reference code. 
+                      </div>
+                    )}
+                  </details>
                 </div>
               </div>
-              
-              <div className="problem-description-text">
-                <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.6', marginBottom: '20px' }}>{formatText(problem.description)}</div>
-                {problem.testCases?.slice(0, 3).map((tc, idx) => (
-                  <div key={idx} className="example-block">
-                    <h4>Example {idx + 1}</h4>
-                    <div className="example-content">
-                      <p><strong>Input:</strong> {tc.input}</p>
-                      <p><strong>Output:</strong> {tc.output}</p>
-                      {tc.explanation && <p><strong>Explanation:</strong> {tc.explanation}</p>}
+            )}
+            {activeTab === 'dryrun' && (
+              <div className="dryrun-view">
+                <h2 style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <Zap size={22} color="#3b82f6" /> Code Visualizer
+                </h2>
+                <div style={{ background: '#18181b', borderRadius: '8px', border: '1px solid #27272a', overflow: 'hidden' }}>
+                  <div style={{ padding: '12px 16px', background: '#0f0f0f', display: 'flex', gap: '12px', borderBottom: '1px solid #27272a' }}>
+                    <button style={{ padding: '6px 12px', background: '#27272a', color: '#f4f4f5', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 600 }}>&laquo; First</button>
+                    <button style={{ padding: '6px 12px', background: '#27272a', color: '#f4f4f5', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 600 }}>&lsaquo; Prev</button>
+                    <button style={{ padding: '6px 12px', background: '#3b82f6', color: '#fff', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 600 }}>Next &rsaquo;</button>
+                    <button style={{ padding: '6px 12px', background: '#27272a', color: '#f4f4f5', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 600 }}>Last &raquo;</button>
+                  </div>
+                  <div style={{ display: 'flex', height: '350px' }}>
+                    <div style={{ flex: 1, borderRight: '1px solid #27272a', padding: '16px', overflowY: 'auto' }}>
+                      <h4 style={{ color: '#a1a1aa', fontSize: '0.75rem', textTransform: 'uppercase', marginBottom: '12px' }}>Code Execution</h4>
+                      <pre style={{ margin: 0, fontFamily: 'monospace', fontSize: '0.85rem', color: '#e2e8f0', position: 'relative' }}>
+<code style={{ display: 'block', paddingLeft: '24px', opacity: 0.5 }}>def solve(nums):</code>
+<code style={{ display: 'block', paddingLeft: '24px', opacity: 0.5 }}>  ans = 0</code>
+<code style={{ display: 'block', paddingLeft: '24px', background: 'rgba(59, 130, 246, 0.15)', color: '#fff' }}><span style={{ position: 'absolute', left: 0, color: '#3b82f6' }}>&rarr;</span>  for n in nums:</code>
+<code style={{ display: 'block', paddingLeft: '24px', opacity: 0.5 }}>    ans += n</code>
+<code style={{ display: 'block', paddingLeft: '24px', opacity: 0.5 }}>  return ans</code>
+                      </pre>
+                    </div>
+                    <div style={{ width: '220px', padding: '16px', overflowY: 'auto', background: '#121212' }}>
+                      <h4 style={{ color: '#a1a1aa', fontSize: '0.75rem', textTransform: 'uppercase', marginBottom: '12px' }}>Frames & Objects</h4>
+                      <div style={{ border: '1px solid #333', borderRadius: '4px', background: '#1a1a1e', marginBottom: '16px' }}>
+                        <div style={{ background: '#222', padding: '4px 8px', fontSize: '0.7rem', color: '#888', borderBottom: '1px solid #333' }}>Global frame</div>
+                        <div style={{ padding: '8px', fontSize: '0.8rem', color: '#ddd' }}>
+                           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}><span>nums</span><span style={{ color: '#3b82f6' }}>[1, 2, 3]</span></div>
+                        </div>
+                      </div>
+                      <div style={{ border: '1px solid #3b82f6', borderRadius: '4px', background: '#1a1e28' }}>
+                        <div style={{ background: 'rgba(59, 130, 246, 0.2)', padding: '4px 8px', fontSize: '0.7rem', color: '#3b82f6', borderBottom: '1px solid #3b82f6' }}>solve()</div>
+                        <div style={{ padding: '8px', fontSize: '0.8rem', color: '#ddd' }}>
+                           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}><span>n</span><span style={{ color: '#10b981' }}>1</span></div>
+                           <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>ans</span><span style={{ color: '#10b981' }}>0</span></div>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                ))}
+                </div>
               </div>
-            </>
-          )}
+            )}
+            {activeTab === 'description' && (
+              <>
+                <div className="problem-title-section">
+                  <h1>{problem.title}</h1>
+                  <div className="problem-badges">
+                  </div>
+                </div>
+                
+                <div className="problem-description-text">
+                  <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.6', marginBottom: '20px' }}>{formatText(problem.description)}</div>
+                  {problem.testCases?.slice(0, 3).map((tc, idx) => (
+                    <div key={idx} className="example-block">
+                      <h4>Example {idx + 1}</h4>
+                      <div className="example-content">
+                        <p><strong>Input:</strong> {tc.input}</p>
+                        <p><strong>Output:</strong> {tc.output}</p>
+                        {tc.explanation && <p><strong>Explanation:</strong> {tc.explanation}</p>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         </div>
         <div className="bottom-meta glass">
           <button className="icon-btn"><Clock size={16} /></button>

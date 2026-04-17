@@ -1,19 +1,19 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@400;500;600&display=swap');
 
 :root {
-  --bg-dark: #0f111a;
-  --bg-card: #161a27;
-  --bg-hover: #1e2436;
+  --bg-dark: #0f0f0f;
+  --bg-card: #18181b;
+  --bg-hover: #27272a;
   --primary: #3b82f6;
-  --primary-glow: rgba(59, 130, 246, 0.5);
-  --accent: #f59e0b;
-  --text-main: #e2e8f0;
-  --text-muted: #94a3b8;
-  --easy: #10b981;
+  --primary-glow: transparent;
+  --accent: #3b82f6;
+  --text-main: #f4f4f5;
+  --text-muted: #a1a1aa;
+  --easy: #22c55e;
   --medium: #f59e0b;
   --hard: #ef4444;
-  --border: rgba(255, 255, 255, 0.1);
-  --glass: rgba(22, 26, 39, 0.7);
+  --border: #27272a;
+  --glass: #18181b;
 }
 
 * {
@@ -49,17 +49,13 @@ button {
 
 /* Glassmorphism Classes */
 .glass {
-  background: var(--glass);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 8px;
 }
 
 .gradient-text {
-  background: linear-gradient(135deg, #fff 0%, #3b82f6 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--primary);
 }
 
 /* Scrollbar */
@@ -87,7 +83,6 @@ button {
 
 .main-content {
   flex: 1;
-  margin-left: 64px;
   display: flex;
   flex-direction: column;
 }

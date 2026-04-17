@@ -57,11 +57,13 @@
 }
 
 .tuf-card {
-  background: #121212;
-  border-radius: 0 0 8px 8px;
-  padding: 24px;
-  height: calc(100% - 40px);
+  border-radius: 8px;
+  padding: 0px;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 .problem-title-section h1 {
@@ -376,59 +378,70 @@
 }
 
 details {
-  background: #1e1e1e;
-  border-radius: 8px;
+  background: transparent;
+  border-radius: 6px;
   overflow: hidden;
-  border: 1px solid #2a2a2a;
-  transition: all 0.3s ease;
+  border: 1px solid #333;
+  transition: border-color 0.2s ease;
 }
 
 details:hover {
-  border-color: #ffd70033;
-  background: #252525;
+  border-color: #555;
 }
 
 summary {
-  padding: 18px 20px;
-  font-weight: 600;
+  padding: 14px 18px;
+  font-weight: 500;
   cursor: pointer;
-  background: transparent;
-  color: #ddd;
+  background: #1e1e1e;
+  color: #e5e5e5;
   list-style: none;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 1rem;
+  font-size: 0.95rem;
+  user-select: none;
+}
+
+summary::-webkit-details-marker {
+  display: none;
 }
 
 summary::after {
-  content: '+';
-  font-size: 1.4rem;
-  color: #ffd700;
-  transition: transform 0.3s;
+  content: '›';
+  font-size: 1.2rem;
+  color: #888;
+  font-family: monospace;
+  transition: transform 0.2s ease;
+  line-height: 1;
 }
 
 details[open] summary::after {
-  content: '+';
-  transform: rotate(45deg);
-  color: #ef4444;
+  transform: rotate(90deg);
+  color: #bbb;
+}
+
+details[open] summary {
+  border-bottom: 1px solid #333;
 }
 
 details p {
-  padding: 20px;
-  color: #aaa;
-  line-height: 1.8;
-  border-top: 1px solid #2a2a2a;
-  background: #161616;
+  padding: 16px 18px;
+  color: #a0a0a0;
+  line-height: 1.6;
+  background: #151515;
+  margin: 0;
+  font-size: 0.9rem;
 }
 
 .editorial-code {
-  background: #0a0a0a;
-  padding: 16px;
+  background: #111;
+  padding: 16px 18px;
   margin: 0;
   overflow-x: auto;
   font-size: 0.85rem;
-  color: #10b981;
+  color: #e2e8f0;
+  border-top: 1px solid #333;
 }
 
 .icon-btn {

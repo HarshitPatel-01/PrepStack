@@ -416,15 +416,45 @@ mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/prepstack')
   .then(async () => {
     console.log('Connected to MongoDB');
     // Keep existing 6, add new 44 to hit 50
+    const generateCategoryHints = (category, title) => {
+        const catH = category.toLowerCase();
+        let intuition = `To approach "${title}", look purely at the logical invariants. How does the data change as you iterate? Try to mentally verify what happens to the output if you slightly perturb the input parameters. Focus strictly on defining the goal boundaries first.`;
+        let approach = `Consider mathematical reductions:\n• Can you pre-compute or sort the input to reduce bounds?\n• Does a sliding scale or layered recursion simplify the state lookup?`;
+
+        if (catH.includes('array') || catH.includes('two pointers') || catH.includes('sliding window')) {
+            intuition = `Before looping, visualize the elements on a 1D plane. Is there a monotonic property? When one boundary shifts, how does it mathematically affect the sum or condition? Notice how reducing redundant overlap points could drop your complexity.`;
+            approach = `Potential structures to test:\n1. Hash Tables: Can you trade O(N) memory for O(1) mathematical lookups?\n2. Prefix Sums: Does the algebraic sum up to index 'i' help quickly deduce the subarray formula?\n3. Two Pointers / Sliding Window: If constraints allow only O(1) memory, can bounding a shrinking window eliminate the need for O(N^2) checks?`;
+        } else if (catH.includes('tree') || catH.includes('graph') || catH.includes('trie')) {
+            intuition = `Visualize the node connections. Are there cycles, or is it strictly hierarchical? Instead of an iterative traversal, think about what the "leaf-most" base case returns to its parent mathematically.`;
+            approach = `Structures to evaluate:\n1. BFS (Queues): Best if seeking the shortest state transition or exploring level-by-level geometries.\n2. DFS (Stacks/Recursion): Useful for exploring all path permutations fully before backtracking.\n3. Disjoint Sets: Could union-find algebra identify sub-networks immediately?`;
+        } else if (catH.includes('dynamic programming') || catH.includes('backtracking')) {
+            intuition = `Break the problem into a macroscopic recurrence relation. If you already knew the optimal answer for N-1, what is the exact mathematical step to construct the answer for N? Identify the overlapping subproblems.`;
+            approach = `Methods to outline:\n1. Top-Down Memoization: Start from the final state and drill backwards mapping states to avoid recalculating variables.\n2. Bottom-Up Tabulation: Build an N-dimensional array and cumulatively aggregate state weights.\n3. Backtracking: Permute states but mathematically bound the recursion using early exit (pruning) conditions.`;
+        } else if (catH.includes('linked list')) {
+            intuition = `Linked structures restrict random leaps. Focus strictly on pointer rearrangement states. If you draw three nodes on paper and trace their pointers, what temporary variables do you mathematically require to avoid losing the next address?`;
+            approach = `Key patterns to inspect:\n1. Fast & Slow Pointers (Floyd's algorithm): Can varying speed geometries instantly locate midpoints or cycles?\n2. Dummy Nodes: A mathematical trick shifting the absolute head to effectively bypass edge-case null exceptions.`;
+        }
+
+        return { intuition, approach };
+    };
+
     for (const p of baseProblems) {
         // Merge with defaults if missing
         if (!p.description) p.description = `Solve the challenge for ${p.title}. Standard LeetCode interview question.`;
         if (!p.starterCodes.python) p.starterCodes.python = p.starterCodes.cpp.replace(/vector<int>&/g, 'List[int]').replace(/vector<vector<int>>&/g, 'List[List[int]]');
         if (!p.starterCodes.java) p.starterCodes.java = "class Solution {\n    // Solve " + p.title + "\n}";
         
+        const hints = generateCategoryHints(p.category || 'misc', p.title);
+        p.editorial = {
+            intuition: hints.intuition,
+            approach: hints.approach,
+            complexity: "Time: O(?), Space: O(?)",
+            solutionCode: p.starterCodes.cpp
+        };
+        
         await Problem.findOneAndUpdate({ title: p.title }, p, { upsert: true });
     }
-    console.log(`✓ Synchronized 50 problems successfully`);
+    console.log(`✓ Synchronized 50 problems successfully with rich category logic`);
     process.exit();
   })
   .catch(err => {
