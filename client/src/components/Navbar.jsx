@@ -22,7 +22,7 @@ const Navbar = () => {
   };
 
   return (
-    <nav className={`navbar glass ${isWorkspace ? 'workspace-navbar' : ''}`}>
+    <nav className={`navbar ${isWorkspace ? 'workspace-navbar' : ''}`}>
       <div className="nav-container">
         <Link to="/" className="nav-logo">
           <Code size={28} className="logo-icon" />

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Search, Filter, CheckCircle, ChevronRight } from 'lucide-react';
+import { apiUrl } from '../lib/api';
 import './Problems.css';
 
 const Problems = () => {
@@ -19,7 +20,7 @@ const Problems = () => {
     if (!user) return alert("Please log in to track progress");
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/auth/toggle-problem`, {
+      const response = await fetch(apiUrl('/auth/toggle-problem'), {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -38,7 +39,7 @@ const Problems = () => {
   useEffect(() => {
     const fetchProblems = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/problems');
+        const response = await fetch(apiUrl('/problems'));
         const data = await response.json();
         setProblems(data);
       } catch (err) {
@@ -169,6 +170,34 @@ const Problems = () => {
                       <div className={`bar ${diff.toLowerCase()}`} style={{width: `${percent}%`}}></div>
                     </div>
                   </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="pattern-recognition-card glass" style={{ marginTop: '20px', padding: '20px' }}>
+            <h3 style={{ marginBottom: '16px', fontSize: '1.1rem', color: 'var(--text-main)' }}>Pattern Recognition</h3>
+            <div className="pattern-list" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {categories.filter(c => c !== 'All').map(pattern => {
+                const patternProblems = problems.filter(p => p.category === pattern);
+                return (
+                  <details key={pattern} className="pattern-details" style={{ background: 'var(--bg-dark)', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                    <summary style={{ cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-main)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>{pattern}</span>
+                      <span style={{ color: 'var(--primary)', background: 'rgba(59,130,246,0.1)', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem' }}>{patternProblems.length}</span>
+                    </summary>
+                    <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px', paddingLeft: '8px', borderLeft: '2px solid var(--border)' }}>
+                      {patternProblems.map(p => {
+                        const isSolved = user?.solvedProblems?.includes(p._id);
+                        return (
+                          <Link to={`/problem/${p._id}`} key={p._id} style={{ fontSize: '0.85rem', color: isSolved ? 'var(--easy)' : 'var(--text-muted)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            {isSolved ? <CheckCircle size={12} /> : <div style={{width: '4px', height: '4px', borderRadius: '50%', background: 'var(--text-muted)'}} />}
+                            <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.title}</span>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </details>
                 );
               })}
             </div>

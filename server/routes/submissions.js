@@ -58,14 +58,32 @@ const buildCode = (language, userCode, handlerFn, testInput) => {
             callArgs.push(varName);
         }
 
+        // Strip #include / #pragma / using namespace from user code —
+        // bits/stdc++.h and using namespace std are already at the top.
+        // Having them mid-file causes preprocessor / redeclaration compile errors.
+        const sanitizedCode = userCode
+            .split('\n')
+            .filter(line => {
+                const t = line.trim();
+                return !(
+                    t.startsWith('#include') ||
+                    t.startsWith('#pragma') ||
+                    t.startsWith('using namespace') ||
+                    t.startsWith('using std::')
+                );
+            })
+            .join('\n')
+            .trim();
+
         return `#include <bits/stdc++.h>
 using namespace std;
 
-// --- Modular Printer System ---
 template<typename T>
 void printVal(T v) { cout << v; }
+
 void printVal(bool v) { cout << (v ? "true" : "false"); }
-void printVal(string v) { cout << "\"" << v << "\""; }
+
+void printVal(string v) { cout << "\\"" << v << "\\""; }
 
 template<typename T>
 void printVal(vector<T>& v) {
@@ -77,12 +95,23 @@ void printVal(vector<T>& v) {
     cout << "]";
 }
 
-${userCode}
+template<typename T>
+void printVal(vector<vector<T>>& v) {
+    cout << "[";
+    for (size_t i = 0; i < v.size(); ++i) {
+        printVal(v[i]);
+        if (i != v.size() - 1) cout << ",";
+    }
+    cout << "]";
+}
+
+${sanitizedCode}
 
 int main() {
     Solution sol;
 ${varDecls.join('\n')}
     auto result = sol.${handlerFn}(${callArgs.join(', ')});
+    cout << endl << "---RESULT---" << endl;
     printVal(result);
     cout << endl;
     return 0;
@@ -98,7 +127,7 @@ ${userCode}
 def solve():
     sol = Solution()
     result = sol.${handlerFn}(${testInput})
-    print(json.dumps(result))
+    print("\\n---RESULT---\\n" + json.dumps(result))
 
 if __name__ == "__main__":
     solve()`;
@@ -113,7 +142,7 @@ class Driver {
     public static void main(String[] args) {
         Solution sol = new Solution();
         Object result = sol.${handlerFn}(${testInput.replace(/\[/g, "new int[]{").replace(/\]/g, "}")});
-        System.out.println(Printer.format(result));
+        System.out.println("\\n---RESULT---\\n" + Printer.format(result));
     }
 }
 
@@ -155,7 +184,7 @@ ${userCode}
 int main() {
     // Basic C judge supports int results for now
     int result = ${handlerFn}(${testInput}); 
-    printf("%d\\n", result);
+    printf("\\n---RESULT---\\n%d\\n", result);
     return 0;
 }`;
     }
@@ -175,7 +204,11 @@ const isCorrect = (actual, expected) => {
         const aP = JSON.parse(a);
         const eP = JSON.parse(e);
         if (Array.isArray(aP) && Array.isArray(eP)) {
-            return JSON.stringify([...aP].sort()) === JSON.stringify([...eP].sort());
+            const sortFn = (x, y) => {
+                if (typeof x === 'number' && typeof y === 'number') return x - y;
+                return String(x).localeCompare(String(y));
+            };
+            return JSON.stringify([...aP].sort(sortFn)) === JSON.stringify([...eP].sort(sortFn));
         }
         return JSON.stringify(aP) === JSON.stringify(eP);
     } catch {
@@ -206,57 +239,63 @@ router.post('/:id', async (req, res) => {
             console.error('Auth check in submission failed:', e.message);
         }
 
-        const results = [];
-        let allPassed = true;
+        let total = problem.testCases.length;
+        let passedCount = 0;
+        let failedCase = null;
+        let finalStatus = "Accepted";
+        let totalRuntimeMs = 0;
 
-        for (const testCase of problem.testCases) {
+        for (let i = 0; i < total; i++) {
+            const testCase = problem.testCases[i];
             const fullCode = buildCode(language, code, problem.handlerFunction, testCase.input);
             
-            console.log('\n--- Generated Code ---\n', fullCode, '\n---');
-            
             const executionResult = await executeCode(language, fullCode);
+            if (executionResult.runtimeMs) totalRuntimeMs += executionResult.runtimeMs;
 
             if (!executionResult.success) {
-                allPassed = false;
-                results.push({
+                finalStatus = executionResult.error.includes('TLE') ? "Time Limit Exceeded" : 
+                              (executionResult.error.startsWith('Compilation') ? "Compilation Error" : "Runtime Error");
+                failedCase = {
                     input: testCase.input,
                     expected: testCase.output,
-                    actual: null,
-                    error: executionResult.error,
-                    passed: false
-                });
+                    got: executionResult.error
+                };
+                break; // stop early like LeetCode
             } else {
-                const actual = executionResult.stdout;
+                let actual = executionResult.stdout;
+                if (actual && actual.includes('---RESULT---')) {
+                    const parts = actual.split('---RESULT---');
+                    actual = parts[parts.length - 1]; // Grabs our protected final answer payload
+                }
                 const passed = isCorrect(actual, testCase.output);
-                if (!passed) allPassed = false;
-
-                console.log(`Input: ${testCase.input} | Got: "${actual}" | Expected: "${testCase.output}" | Pass: ${passed}`);
-
-                results.push({
-                    input: testCase.input,
-                    expected: testCase.output,
-                    actual,
-                    passed
-                });
+                
+                if (!passed) {
+                    finalStatus = "Wrong Answer";
+                    failedCase = {
+                        input: testCase.input,
+                        expected: testCase.output,
+                        got: actual
+                    };
+                    break; // stop early like LeetCode
+                } else {
+                    passedCount++;
+                }
             }
         }
 
         // --- Mark as Done if Success ---
-        if (allPassed && userId) {
+        if (finalStatus === "Accepted" && userId) {
             await User.findByIdAndUpdate(userId, {
                 $addToSet: { solvedProblems: problem._id }
             });
-            console.log(`User ${userId} solved problem ${problem._id}`);
         }
 
         res.json({
-            success: allPassed,
-            message: allPassed ? 'Accepted' : 
-                     results[0]?.error ? (results[0].error.includes('TLE') ? 'Time Limit Exceeded' : 
-                                         results[0].error.startsWith('Compilation') ? 'Compilation Error' : 
-                                         'Runtime Error') : 
-                     'Wrong Answer',
-            results
+            status: finalStatus,
+            total: total,
+            passed: passedCount,
+            failedCase: failedCase,
+            runtimeMs: totalRuntimeMs
         });
     } catch (err) {
         console.error(err);

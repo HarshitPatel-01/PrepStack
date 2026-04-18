@@ -1,7 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import Navbar from './components/Navbar';
-import Sidebar from './components/Sidebar';
 import Problems from './pages/Problems';
 import Workspace from './pages/Workspace';
 import Login from './pages/Login';
@@ -14,7 +13,6 @@ function AppContent() {
 
   return (
     <div className={`app-layout ${isWorkspace ? 'workspace-mode' : ''}`}>
-      {!isWorkspace && <Sidebar />}
       <div className="main-content">
         <Navbar />
         <div className="page-container">

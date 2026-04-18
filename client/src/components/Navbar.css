@@ -5,18 +5,16 @@
   width: 100%;
   height: 64px;
   z-index: 1000;
-  border-radius: 0;
-  border-top: none;
-  border-left: none;
-  border-right: none;
+  border: none;
   display: flex;
   align-items: center;
+  background: transparent;
 }
 
 .workspace-navbar {
   height: 40px;
-  border-bottom: 1px solid var(--border);
-  background: var(--bg-dark);
+  background: transparent;
+  border: none;
 }
 
 .nav-container {
