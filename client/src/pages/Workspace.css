@@ -526,3 +526,41 @@ details p {
   background: #2a2a2a;
   color: #ccc;
 }
+
+/* ─── Dry Run Full-Page Mode ─────────────────────────────────────────────── */
+/* When Dry Run is active, the right panel and resizer are hidden */
+.workspace-container.dryrun-fullpage .horizontal-resizer-handle,
+.workspace-container.dryrun-fullpage .workspace-right {
+  display: none !important;
+}
+
+.workspace-container.dryrun-fullpage .workspace-left {
+  width: 100% !important;
+  flex: 1 1 100% !important;
+}
+
+.workspace-container.dryrun-fullpage .bottom-meta {
+  display: none;
+}
+
+.workspace-container.dryrun-fullpage .problem-content.tuf-card {
+  padding: 0;
+  overflow: hidden; /* Let visualizer handle scroll */
+}
+
+.dryrun-view {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  height: 100%;
+}
+
+/* Ensure the left panel stretches correctly */
+.workspace-container.dryrun-fullpage .workspace-left {
+  width: 100% !important;
+  flex: 1 1 100% !important;
+  padding: 0;
+}
+

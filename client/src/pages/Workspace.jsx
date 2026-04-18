@@ -5,6 +5,7 @@ import { Play, Send, Settings, RotateCcw, ChevronDown, Loader2, MessageCircle, I
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { apiUrl } from '../lib/api';
+import DryRunVisualizer from '../components/DryRunVisualizer';
 import './Workspace.css';
 
 const Workspace = () => {
@@ -25,8 +26,6 @@ const Workspace = () => {
   const [leftWidth, setLeftWidth] = useState(450);
   const [notes, setNotes] = useState('');
   const [savingNotes, setSavingNotes] = useState(false);
-  const [visualizeCode, setVisualizeCode] = useState('// Enter C++ code here to visualize\n#include <iostream>\nusing namespace std;\n\nint main() {\n  cout << "Hello World!";\n  return 0;\n}');
-  const [visualizeUrl, setVisualizeUrl] = useState('');
 
   const startDragHorizontal = (e) => {
     e.preventDefault();
@@ -148,19 +147,7 @@ const Workspace = () => {
     }
   };
 
-  const handleVisualize = () => {
-    let finalCode = visualizeCode;
 
-    // Python Tutor C++ compilation requires a main() function.
-    if (!finalCode.includes('main')) {
-      alert("Note: A valid C++ program requires an 'int main()' function. We've automatically wrapped your class in a standard template to prevent compilation errors. You will need to explicitly call your functions inside main() to visualize their execution!");
-      finalCode = `#include <iostream>\n#include <vector>\n#include <string>\n#include <unordered_map>\n#include <unordered_set>\n#include <stack>\n#include <algorithm>\nusing namespace std;\n\n${finalCode}\n\nint main() {\n    // Code wrapped automatically because 'main' was missing.\n    // Example: Solution s; s.twoSum(...);\n    return 0;\n}`;
-      setVisualizeCode(finalCode);
-    }
-
-    const url = `https://pythontutor.com/iframe-embed.html#code=${encodeURIComponent(finalCode)}&codeDivHeight=400&codeDivWidth=350&cumulative=false&curInstr=0&heapPrimitives=nevernest&origin=opt-frontend.js&py=cpp_g%2B%2B11&rawInputLstJSON=%5B%5D&textReferences=false`;
-    setVisualizeUrl(url);
-  };
 
   const handleRun = async () => {
     setSubmitting(true);
@@ -233,8 +220,8 @@ const Workspace = () => {
   if (!problem) return <div className="workspace-error">Problem not found</div>;
 
   return (
-    <div className="workspace-container tuf-style">
-      <div className="workspace-left glass" style={{ width: `${leftWidth}px`, flex: `0 0 ${leftWidth}px` }}>
+    <div className={`workspace-container tuf-style ${activeTab === 'dryrun' ? 'dryrun-fullpage' : ''}`}>
+      <div className="workspace-left glass" style={activeTab === 'dryrun' ? { flex: '1 1 100%', width: '100%' } : { width: `${leftWidth}px`, flex: `0 0 ${leftWidth}px` }}>
         <div className="tab-header tuf-tabs" style={{ display: 'flex', position: 'relative' }}>
           {[
             { id: 'description', label: 'Description', icon: FileCode },
@@ -276,143 +263,107 @@ const Workspace = () => {
         </div>
 
         <div className="problem-content tuf-card">
-          <div style={{ padding: '24px' }}>
-            {activeTab === 'editorial' && (
-              <div className="editorial-view">
-                <h2>Process</h2>
-                <div className="accordion-container">
-                  <details open>
-                    <summary>Intuition (No Hints)</summary>
-                    <p style={{ whiteSpace: 'pre-line' }}>{problem.editorial?.intuition || "No hints are provided. Formulate your foundational logic cleanly."}</p>
-                  </details>
-                  <details>
-                    <summary>Different ways to Approach</summary>
-                    <p style={{ whiteSpace: 'pre-line' }}>{problem.editorial?.approach || "Think about optimal and sub-optimal ways."}</p>
-                  </details>
-                  <details>
-                    <summary>Complexity</summary>
-                    <p style={{ whiteSpace: 'pre-line' }}>{problem.editorial?.complexity || "Time: O(N), Space: O(1)"}</p>
-                  </details>
+          {activeTab === 'dryrun' ? (
+            <div className="dryrun-view">
+              <DryRunVisualizer initialCode={code} initialLanguage={language} />
+            </div>
+          ) : (
+            <div style={{ padding: '24px' }}>
+              {activeTab === 'editorial' && (
+                <div className="editorial-view">
+                  <h2>Process</h2>
+                  <div className="accordion-container">
+                    <details open>
+                      <summary>Intuition (No Hints)</summary>
+                      <p style={{ whiteSpace: 'pre-line' }}>{problem.editorial?.intuition || "No hints are provided. Formulate your foundational logic cleanly."}</p>
+                    </details>
+                    <details>
+                      <summary>Different ways to Approach</summary>
+                      <p style={{ whiteSpace: 'pre-line' }}>{problem.editorial?.approach || "Think about optimal and sub-optimal ways."}</p>
+                    </details>
+                    <details>
+                      <summary>Complexity</summary>
+                      <p style={{ whiteSpace: 'pre-line' }}>{problem.editorial?.complexity || "Time: O(N), Space: O(1)"}</p>
+                    </details>
+                  </div>
                 </div>
-              </div>
-            )}
-            {activeTab === 'solutions' && (
-              <div className="solutions-view">
-                <h2>Code</h2>
-                <div className="accordion-container">
-                  <details open>
-                    <summary>Brute Force Process: Will that work?</summary>
-                    <p style={{ whiteSpace: 'pre-line', marginBottom: '10px' }}>{problem.editorial?.bruteForceApproach || "Explain the simplest possible solution."}</p>
-                    {result?.status === 'Accepted' ? (
-                      <pre className="editorial-code"><code>{problem.editorial?.bruteForceCode || "// No brute force code provided."}</code></pre>
-                    ) : (
-                      <div style={{ padding: '20px', color: '#888', fontStyle: 'italic', background: '#151515', fontSize: '0.9rem', borderTop: '1px solid #333' }}>
-                         You must successfully submit a passing solution to unlock the reference code. 
-                      </div>
-                    )}
-                  </details>
-                  <details>
-                    <summary>Optimal Approach</summary>
-                    <p style={{ whiteSpace: 'pre-line', marginBottom: '10px' }}>{problem.editorial?.optimalApproach || "Explain the optimized version."}</p>
-                    {result?.status === 'Accepted' ? (
-                      <pre className="editorial-code"><code>{problem.editorial?.optimalCode || "// No optimal code provided."}</code></pre>
-                    ) : (
-                      <div style={{ padding: '20px', color: '#888', fontStyle: 'italic', background: '#151515', fontSize: '0.9rem', borderTop: '1px solid #333' }}>
-                         You must successfully submit a passing solution to unlock the reference code. 
-                      </div>
-                    )}
-                  </details>
+              )}
+              {activeTab === 'solutions' && (
+                <div className="solutions-view">
+                  <h2>Code</h2>
+                  <div className="accordion-container">
+                    <details open>
+                      <summary>Brute Force Process: Will that work?</summary>
+                      <p style={{ whiteSpace: 'pre-line', marginBottom: '10px' }}>{problem.editorial?.bruteForceApproach || "Explain the simplest possible solution."}</p>
+                      {result?.status === 'Accepted' ? (
+                        <pre className="editorial-code"><code>{problem.editorial?.bruteForceCode || "// No brute force code provided."}</code></pre>
+                      ) : (
+                        <div style={{ padding: '20px', color: '#888', fontStyle: 'italic', background: '#151515', fontSize: '0.9rem', borderTop: '1px solid #333' }}>
+                           You must successfully submit a passing solution to unlock the reference code. 
+                        </div>
+                      )}
+                    </details>
+                    <details>
+                      <summary>Optimal Approach</summary>
+                      <p style={{ whiteSpace: 'pre-line', marginBottom: '10px' }}>{problem.editorial?.optimalApproach || "Explain the optimized version."}</p>
+                      {result?.status === 'Accepted' ? (
+                        <pre className="editorial-code"><code>{problem.editorial?.optimalCode || "// No optimal code provided."}</code></pre>
+                      ) : (
+                        <div style={{ padding: '20px', color: '#888', fontStyle: 'italic', background: '#151515', fontSize: '0.9rem', borderTop: '1px solid #333' }}>
+                           You must successfully submit a passing solution to unlock the reference code. 
+                        </div>
+                      )}
+                    </details>
+                  </div>
                 </div>
-              </div>
-            )}
-            {activeTab === 'dryrun' && (
-              <div className="dryrun-view">
-                <h2 style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <Zap size={22} color="#3b82f6" /> Code Visualizer
-                </h2>
-                {!visualizeUrl ? (
-                  <div style={{ background: '#18181b', borderRadius: '8px', border: '1px solid #27272a', padding: '16px' }}>
-                    <p style={{ marginBottom: '12px', fontSize: '0.9rem', color: '#a1a1aa' }}>Enter your C++ code to step through execution, variables, and memory.</p>
-                    <div className="monaco-wrapper" style={{ height: '300px', border: '1px solid #333', borderRadius: '4px', overflow: 'hidden', marginBottom: '16px' }}>
-                      <Editor
-                        height="100%"
-                        language="cpp"
-                        theme="vs-dark"
-                        value={visualizeCode}
-                        onChange={(value) => setVisualizeCode(value)}
-                        options={{ minimap: { enabled: false }, fontSize: 13, scrollBeyondLastLine: false }}
-                      />
-                    </div>
+              )}
+              {activeTab === 'observations' && (
+                <div className="observations-view">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Edit3 size={20} color="var(--primary)" /> Key Observations</h2>
                     <button 
-                      onClick={handleVisualize}
-                      style={{ background: 'var(--primary)', color: '#fff', padding: '8px 16px', borderRadius: '6px', fontSize: '0.9rem', fontWeight: 600, transition: 'all 0.2s' }}
+                      onClick={handleSaveNotes} 
+                      disabled={savingNotes}
+                      style={{ background: 'var(--primary)', color: '#fff', padding: '6px 14px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', opacity: savingNotes ? 0.7 : 1 }}
                     >
-                      Visualize Code
+                      {savingNotes ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <span style={{display:'inline-block'}}>Save Notes</span>}
                     </button>
                   </div>
-                ) : (
-                  <div style={{ background: '#18181b', borderRadius: '8px', border: '1px solid #27272a', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                    <div style={{ padding: '8px 16px', borderBottom: '1px solid #27272a', display: 'flex', justifyContent: 'flex-end', background: '#0f0f0f' }}>
-                       <button onClick={() => setVisualizeUrl('')} style={{ color: '#a1a1aa', fontSize: '0.85rem', fontWeight: 'bold' }}>&larr; Back to Editor</button>
-                    </div>
-                    <iframe 
-                      title="visualizer"
-                      width="100%" 
-                      height="500" 
-                      frameBorder="0" 
-                      src={visualizeUrl}
-                      style={{ background: '#fff' }}
+                  <div style={{ background: '#121212', borderRadius: '8px', padding: '16px', border: '1px solid var(--border)', minHeight: '350px' }}>
+                    <textarea 
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      placeholder="Jot down your mistakes, edge cases, core logic patterns, or any key insights you gained while solving this..."
+                      style={{ width: '100%', minHeight: '320px', background: 'transparent', border: 'none', color: 'var(--text-main)', fontSize: '0.95rem', resize: 'vertical', outline: 'none', lineHeight: '1.6' }}
                     />
                   </div>
-                )}
-              </div>
-            )}
-            {activeTab === 'observations' && (
-              <div className="observations-view">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                  <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Edit3 size={20} color="var(--primary)" /> Key Observations</h2>
-                  <button 
-                    onClick={handleSaveNotes} 
-                    disabled={savingNotes}
-                    style={{ background: 'var(--primary)', color: '#fff', padding: '6px 14px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', opacity: savingNotes ? 0.7 : 1 }}
-                  >
-                    {savingNotes ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <span style={{display:'inline-block'}}>Save Notes</span>}
-                  </button>
                 </div>
-                <div style={{ background: '#121212', borderRadius: '8px', padding: '16px', border: '1px solid var(--border)', minHeight: '350px' }}>
-                  <textarea 
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Jot down your mistakes, edge cases, core logic patterns, or any key insights you gained while solving this..."
-                    style={{ width: '100%', minHeight: '320px', background: 'transparent', border: 'none', color: 'var(--text-main)', fontSize: '0.95rem', resize: 'vertical', outline: 'none', lineHeight: '1.6' }}
-                  />
-                </div>
-              </div>
-            )}
-            {activeTab === 'description' && (
-              <>
-                <div className="problem-title-section">
-                  <h1>{problem.title}</h1>
-                  <div className="problem-badges">
-                  </div>
-                </div>
-                
-                <div className="problem-description-text">
-                  <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.6', marginBottom: '20px' }}>{formatText(problem.description)}</div>
-                  {problem.testCases?.slice(0, 3).map((tc, idx) => (
-                    <div key={idx} className="example-block">
-                      <h4>Example {idx + 1}</h4>
-                      <div className="example-content">
-                        <p><strong>Input:</strong> {tc.input}</p>
-                        <p><strong>Output:</strong> {tc.output}</p>
-                        {tc.explanation && <p><strong>Explanation:</strong> {tc.explanation}</p>}
-                      </div>
+              )}
+              {activeTab === 'description' && (
+                <>
+                  <div className="problem-title-section">
+                    <h1>{problem.title}</h1>
+                    <div className="problem-badges">
                     </div>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
+                  </div>
+                  
+                  <div className="problem-description-text">
+                    <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.6', marginBottom: '20px' }}>{formatText(problem.description)}</div>
+                    {problem.testCases?.slice(0, 3).map((tc, idx) => (
+                      <div key={idx} className="example-block">
+                        <h4>Example {idx + 1}</h4>
+                        <div className="example-content">
+                          <p><strong>Input:</strong> {tc.input}</p>
+                          <p><strong>Output:</strong> {tc.output}</p>
+                          {tc.explanation && <p><strong>Explanation:</strong> {tc.explanation}</p>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
         <div className="bottom-meta glass">
           <button className="icon-btn"><Clock size={16} /></button>
