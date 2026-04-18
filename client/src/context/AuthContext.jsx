@@ -1,4 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
+import { apiUrl } from '../lib/api';
 
 const AuthContext = createContext();
 
@@ -9,7 +10,7 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
-      fetch('http://localhost:5000/api/auth/me', {
+      fetch(apiUrl('/auth/me'), {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       .then(res => res.json())
@@ -38,7 +39,7 @@ export const AuthProvider = ({ children }) => {
     const token = localStorage.getItem('token');
     if (token) {
       try {
-        const res = await fetch('http://localhost:5000/api/auth/me', {
+        const res = await fetch(apiUrl('/auth/me'), {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();

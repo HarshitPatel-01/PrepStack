@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import Editor from '@monaco-editor/react';
-import { Play, Send, Settings, RotateCcw, ChevronDown, Loader2, MessageCircle, Info, FileCode, History, Copy, Clock, Zap } from 'lucide-react';
+import { Play, Send, Settings, RotateCcw, ChevronDown, Loader2, MessageCircle, Info, FileCode, History, Copy, Clock, Zap, Edit3 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
+import { apiUrl } from '../lib/api';
+import DryRunVisualizer from '../components/DryRunVisualizer';
 import './Workspace.css';
 
 const Workspace = () => {
@@ -11,6 +13,8 @@ const Workspace = () => {
   const { refreshUser } = useAuth();
   const [problem, setProblem] = useState(null);
   const [code, setCode] = useState('');
+  // Stores user edits per language so switching tabs restores their work
+  const [savedCode, setSavedCode] = useState({ cpp: '', python: '', java: '', c: '' });
   const [activeTab, setActiveTab] = useState('description');
   const [outputTab, setOutputTab] = useState('testcases');
   const [language, setLanguage] = useState('cpp');
@@ -19,7 +23,9 @@ const Workspace = () => {
   const [result, setResult] = useState(null);
   const [activeCase, setActiveCase] = useState(0);
   const [editorFlex, setEditorFlex] = useState(60);
-  const [leftWidth, setLeftWidth] = useState(450); // initial 450px
+  const [leftWidth, setLeftWidth] = useState(450);
+  const [notes, setNotes] = useState('');
+  const [savingNotes, setSavingNotes] = useState(false);
 
   const startDragHorizontal = (e) => {
     e.preventDefault();
@@ -79,10 +85,18 @@ const Workspace = () => {
   useEffect(() => {
     const fetchProblem = async () => {
       try {
-        const response = await fetch(`http://localhost:5000/api/problems/${id}`);
+        const response = await fetch(apiUrl(`/problems/${id}`));
         const data = await response.json();
         setProblem(data);
-        setCode(getStarterCode(data, language));
+        // Initialize editor with per-language starter codes
+        const initial = {
+          cpp:    getStarterCode(data, 'cpp'),
+          python: getStarterCode(data, 'python'),
+          java:   getStarterCode(data, 'java'),
+          c:      getStarterCode(data, 'c'),
+        };
+        setSavedCode(initial);
+        setCode(initial[language]);
       } catch (err) {
         console.error('Error fetching problem:', err);
       } finally {
@@ -92,13 +106,56 @@ const Workspace = () => {
     fetchProblem();
   }, [id]);
 
+  useEffect(() => {
+    const fetchNotes = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        const response = await fetch(apiUrl(`/auth/notes/${id}`), {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+        if (data.notes) setNotes(data.notes);
+      } catch (err) {
+        console.error('Error fetching notes:', err);
+      }
+    };
+    fetchNotes();
+  }, [id]);
+
+  const handleSaveNotes = async () => {
+    setSavingNotes(true);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert("Please login to save notes!");
+        setSavingNotes(false);
+        return;
+      }
+      await fetch(apiUrl(`/auth/notes/${id}`), {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ notes })
+      });
+    } catch (err) {
+      console.error('Error saving notes:', err);
+    } finally {
+      setTimeout(() => setSavingNotes(false), 500); // UI feedback delay
+    }
+  };
+
+
+
   const handleRun = async () => {
     setSubmitting(true);
     setResult(null);
     setOutputTab('result');
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/submit/${id}`, {
+      const response = await fetch(apiUrl(`/submit/${id}`), {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -108,11 +165,11 @@ const Workspace = () => {
       });
       const data = await response.json();
       setResult(data);
-      if (data.success) {
+      if (data.status === 'Accepted') {
         refreshUser();
       }
     } catch (err) {
-      setResult({ success: false, message: 'Server error' });
+      setResult({ status: 'Error', message: 'Server error' });
     } finally {
       setSubmitting(false);
     }
@@ -123,15 +180,22 @@ const Workspace = () => {
     setResult(null);
     setOutputTab('result');
     try {
-      const response = await fetch(`http://localhost:5000/api/submit/${id}`, {
+      const token = localStorage.getItem('token');
+      const response = await fetch(apiUrl(`/submit/${id}`), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
         body: JSON.stringify({ code, language })
       });
       const data = await response.json();
       setResult(data);
+      if (data.status === 'Accepted') {
+        refreshUser();
+      }
     } catch (err) {
-      setResult({ success: false, message: 'Server error' });
+      setResult({ status: 'Error', message: 'Server error' });
     } finally {
       setSubmitting(false);
     }
@@ -156,15 +220,15 @@ const Workspace = () => {
   if (!problem) return <div className="workspace-error">Problem not found</div>;
 
   return (
-    <div className="workspace-container tuf-style">
-      <div className="workspace-left glass" style={{ width: `${leftWidth}px`, flex: `0 0 ${leftWidth}px` }}>
+    <div className={`workspace-container tuf-style ${activeTab === 'dryrun' ? 'dryrun-fullpage' : ''}`}>
+      <div className="workspace-left glass" style={activeTab === 'dryrun' ? { flex: '1 1 100%', width: '100%' } : { width: `${leftWidth}px`, flex: `0 0 ${leftWidth}px` }}>
         <div className="tab-header tuf-tabs" style={{ display: 'flex', position: 'relative' }}>
           {[
             { id: 'description', label: 'Description', icon: FileCode },
             { id: 'editorial', label: 'Process', icon: Info },
+            { id: 'solutions', label: 'Code', icon: FileCode },
             { id: 'dryrun', label: 'Dry Run', icon: Zap },
-            { id: 'submissions', label: 'Submissions', icon: History },
-            { id: 'discussion', label: 'Discussion', icon: MessageCircle }
+            { id: 'observations', label: 'Key Observations', icon: Edit3 }
           ].map(tab => {
             const Icon = tab.icon;
             return (
@@ -199,99 +263,107 @@ const Workspace = () => {
         </div>
 
         <div className="problem-content tuf-card">
-          <div style={{ padding: '24px' }}>
-            {activeTab === 'editorial' && (
-              <div className="editorial-view">
-                <h2>Process</h2>
-                <div className="accordion-container">
-                  <details open>
-                    <summary>Intuition (No Hints)</summary>
-                    <p style={{ whiteSpace: 'pre-line' }}>{problem.editorial?.intuition || "No hints are provided. Formulate your foundational logic cleanly."}</p>
-                  </details>
-                  <details>
-                    <summary>Different ways to Approach</summary>
-                    <p style={{ whiteSpace: 'pre-line' }}>{problem.editorial?.approach || "Think about optimal and sub-optimal ways."}</p>
-                  </details>
-                  <details>
-                    <summary>Code Solution 🔒</summary>
-                    {result?.success ? (
-                      <pre className="editorial-code"><code>{problem.editorial?.solutionCode || "// No solution code provided."}</code></pre>
-                    ) : (
-                      <div style={{ padding: '20px', color: '#888', fontStyle: 'italic', background: '#151515', fontSize: '0.9rem', borderTop: '1px solid #333' }}>
-                         You must successfully submit a passing solution to unlock the reference code. 
-                      </div>
-                    )}
-                  </details>
-                </div>
-              </div>
-            )}
-            {activeTab === 'dryrun' && (
-              <div className="dryrun-view">
-                <h2 style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <Zap size={22} color="#3b82f6" /> Code Visualizer
-                </h2>
-                <div style={{ background: '#18181b', borderRadius: '8px', border: '1px solid #27272a', overflow: 'hidden' }}>
-                  <div style={{ padding: '12px 16px', background: '#0f0f0f', display: 'flex', gap: '12px', borderBottom: '1px solid #27272a' }}>
-                    <button style={{ padding: '6px 12px', background: '#27272a', color: '#f4f4f5', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 600 }}>&laquo; First</button>
-                    <button style={{ padding: '6px 12px', background: '#27272a', color: '#f4f4f5', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 600 }}>&lsaquo; Prev</button>
-                    <button style={{ padding: '6px 12px', background: '#3b82f6', color: '#fff', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 600 }}>Next &rsaquo;</button>
-                    <button style={{ padding: '6px 12px', background: '#27272a', color: '#f4f4f5', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 600 }}>Last &raquo;</button>
+          {activeTab === 'dryrun' ? (
+            <div className="dryrun-view">
+              <DryRunVisualizer initialCode={code} initialLanguage={language} />
+            </div>
+          ) : (
+            <div style={{ padding: '24px' }}>
+              {activeTab === 'editorial' && (
+                <div className="editorial-view">
+                  <h2>Process</h2>
+                  <div className="accordion-container">
+                    <details open>
+                      <summary>Intuition (No Hints)</summary>
+                      <p style={{ whiteSpace: 'pre-line' }}>{problem.editorial?.intuition || "No hints are provided. Formulate your foundational logic cleanly."}</p>
+                    </details>
+                    <details>
+                      <summary>Different ways to Approach</summary>
+                      <p style={{ whiteSpace: 'pre-line' }}>{problem.editorial?.approach || "Think about optimal and sub-optimal ways."}</p>
+                    </details>
+                    <details>
+                      <summary>Complexity</summary>
+                      <p style={{ whiteSpace: 'pre-line' }}>{problem.editorial?.complexity || "Time: O(N), Space: O(1)"}</p>
+                    </details>
                   </div>
-                  <div style={{ display: 'flex', height: '350px' }}>
-                    <div style={{ flex: 1, borderRight: '1px solid #27272a', padding: '16px', overflowY: 'auto' }}>
-                      <h4 style={{ color: '#a1a1aa', fontSize: '0.75rem', textTransform: 'uppercase', marginBottom: '12px' }}>Code Execution</h4>
-                      <pre style={{ margin: 0, fontFamily: 'monospace', fontSize: '0.85rem', color: '#e2e8f0', position: 'relative' }}>
-<code style={{ display: 'block', paddingLeft: '24px', opacity: 0.5 }}>def solve(nums):</code>
-<code style={{ display: 'block', paddingLeft: '24px', opacity: 0.5 }}>  ans = 0</code>
-<code style={{ display: 'block', paddingLeft: '24px', background: 'rgba(59, 130, 246, 0.15)', color: '#fff' }}><span style={{ position: 'absolute', left: 0, color: '#3b82f6' }}>&rarr;</span>  for n in nums:</code>
-<code style={{ display: 'block', paddingLeft: '24px', opacity: 0.5 }}>    ans += n</code>
-<code style={{ display: 'block', paddingLeft: '24px', opacity: 0.5 }}>  return ans</code>
-                      </pre>
+                </div>
+              )}
+              {activeTab === 'solutions' && (
+                <div className="solutions-view">
+                  <h2>Code</h2>
+                  <div className="accordion-container">
+                    <details open>
+                      <summary>Brute Force Process: Will that work?</summary>
+                      <p style={{ whiteSpace: 'pre-line', marginBottom: '10px' }}>{problem.editorial?.bruteForceApproach || "Explain the simplest possible solution."}</p>
+                      {result?.status === 'Accepted' ? (
+                        <pre className="editorial-code"><code>{problem.editorial?.bruteForceCode || "// No brute force code provided."}</code></pre>
+                      ) : (
+                        <div style={{ padding: '20px', color: '#888', fontStyle: 'italic', background: '#151515', fontSize: '0.9rem', borderTop: '1px solid #333' }}>
+                           You must successfully submit a passing solution to unlock the reference code. 
+                        </div>
+                      )}
+                    </details>
+                    <details>
+                      <summary>Optimal Approach</summary>
+                      <p style={{ whiteSpace: 'pre-line', marginBottom: '10px' }}>{problem.editorial?.optimalApproach || "Explain the optimized version."}</p>
+                      {result?.status === 'Accepted' ? (
+                        <pre className="editorial-code"><code>{problem.editorial?.optimalCode || "// No optimal code provided."}</code></pre>
+                      ) : (
+                        <div style={{ padding: '20px', color: '#888', fontStyle: 'italic', background: '#151515', fontSize: '0.9rem', borderTop: '1px solid #333' }}>
+                           You must successfully submit a passing solution to unlock the reference code. 
+                        </div>
+                      )}
+                    </details>
+                  </div>
+                </div>
+              )}
+              {activeTab === 'observations' && (
+                <div className="observations-view">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Edit3 size={20} color="var(--primary)" /> Key Observations</h2>
+                    <button 
+                      onClick={handleSaveNotes} 
+                      disabled={savingNotes}
+                      style={{ background: 'var(--primary)', color: '#fff', padding: '6px 14px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', opacity: savingNotes ? 0.7 : 1 }}
+                    >
+                      {savingNotes ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <span style={{display:'inline-block'}}>Save Notes</span>}
+                    </button>
+                  </div>
+                  <div style={{ background: '#121212', borderRadius: '8px', padding: '16px', border: '1px solid var(--border)', minHeight: '350px' }}>
+                    <textarea 
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      placeholder="Jot down your mistakes, edge cases, core logic patterns, or any key insights you gained while solving this..."
+                      style={{ width: '100%', minHeight: '320px', background: 'transparent', border: 'none', color: 'var(--text-main)', fontSize: '0.95rem', resize: 'vertical', outline: 'none', lineHeight: '1.6' }}
+                    />
+                  </div>
+                </div>
+              )}
+              {activeTab === 'description' && (
+                <>
+                  <div className="problem-title-section">
+                    <h1>{problem.title}</h1>
+                    <div className="problem-badges">
                     </div>
-                    <div style={{ width: '220px', padding: '16px', overflowY: 'auto', background: '#121212' }}>
-                      <h4 style={{ color: '#a1a1aa', fontSize: '0.75rem', textTransform: 'uppercase', marginBottom: '12px' }}>Frames & Objects</h4>
-                      <div style={{ border: '1px solid #333', borderRadius: '4px', background: '#1a1a1e', marginBottom: '16px' }}>
-                        <div style={{ background: '#222', padding: '4px 8px', fontSize: '0.7rem', color: '#888', borderBottom: '1px solid #333' }}>Global frame</div>
-                        <div style={{ padding: '8px', fontSize: '0.8rem', color: '#ddd' }}>
-                           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}><span>nums</span><span style={{ color: '#3b82f6' }}>[1, 2, 3]</span></div>
+                  </div>
+                  
+                  <div className="problem-description-text">
+                    <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.6', marginBottom: '20px' }}>{formatText(problem.description)}</div>
+                    {problem.testCases?.slice(0, 3).map((tc, idx) => (
+                      <div key={idx} className="example-block">
+                        <h4>Example {idx + 1}</h4>
+                        <div className="example-content">
+                          <p><strong>Input:</strong> {tc.input}</p>
+                          <p><strong>Output:</strong> {tc.output}</p>
+                          {tc.explanation && <p><strong>Explanation:</strong> {tc.explanation}</p>}
                         </div>
                       </div>
-                      <div style={{ border: '1px solid #3b82f6', borderRadius: '4px', background: '#1a1e28' }}>
-                        <div style={{ background: 'rgba(59, 130, 246, 0.2)', padding: '4px 8px', fontSize: '0.7rem', color: '#3b82f6', borderBottom: '1px solid #3b82f6' }}>solve()</div>
-                        <div style={{ padding: '8px', fontSize: '0.8rem', color: '#ddd' }}>
-                           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}><span>n</span><span style={{ color: '#10b981' }}>1</span></div>
-                           <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>ans</span><span style={{ color: '#10b981' }}>0</span></div>
-                        </div>
-                      </div>
-                    </div>
+                    ))}
                   </div>
-                </div>
-              </div>
-            )}
-            {activeTab === 'description' && (
-              <>
-                <div className="problem-title-section">
-                  <h1>{problem.title}</h1>
-                  <div className="problem-badges">
-                  </div>
-                </div>
-                
-                <div className="problem-description-text">
-                  <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.6', marginBottom: '20px' }}>{formatText(problem.description)}</div>
-                  {problem.testCases?.slice(0, 3).map((tc, idx) => (
-                    <div key={idx} className="example-block">
-                      <h4>Example {idx + 1}</h4>
-                      <div className="example-content">
-                        <p><strong>Input:</strong> {tc.input}</p>
-                        <p><strong>Output:</strong> {tc.output}</p>
-                        {tc.explanation && <p><strong>Explanation:</strong> {tc.explanation}</p>}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
         <div className="bottom-meta glass">
           <button className="icon-btn"><Clock size={16} /></button>
@@ -307,37 +379,75 @@ const Workspace = () => {
         <div className="editor-section glass" style={{ flex: `${editorFlex} 1 0%` }}>
           <div className="editor-header tuf-header">
             <div className="lang-selector">
+              <div className={`lang-dot ${language}`} />
               <select 
                 value={language} 
                 onChange={(e) => {
                   const newLang = e.target.value;
+                  // Save current edits before switching
+                  setSavedCode(prev => ({ ...prev, [language]: code }));
                   setLanguage(newLang);
-                  setCode(getStarterCode(problem, newLang));
+                  // Restore previously saved code, or the starter code
+                  setCode(savedCode[newLang] || getStarterCode(problem, newLang));
+                  setResult(null);
                 }} 
                 className="tuf-select"
               >
-                <option value="cpp">C++</option>
-                <option value="python">Python</option>
+                <option value="cpp">C++ 17</option>
+                <option value="python">Python 3</option>
                 <option value="java">Java</option>
                 <option value="c">C</option>
               </select>
             </div>
             <div className="editor-actions">
-              <button className="icon-btn"><Copy size={18} /></button>
-              <button className="icon-btn" onClick={() => setCode(starterTemplates[language])}><RotateCcw size={18} /></button>
-              <button className="tuf-try-btn" onClick={handleRun}>Run</button>
-              <button className="tuf-submit-btn" onClick={handleSubmit}>Submit</button>
+              <button className="icon-btn" onClick={() => navigator.clipboard.writeText(code)} title="Copy Code"><Copy size={16} /></button>
+              <button className="icon-btn" onClick={() => {
+                const starter = getStarterCode(problem, language);
+                setCode(starter);
+                setSavedCode(prev => ({ ...prev, [language]: starter }));
+              }} title="Reset to starter code"><RotateCcw size={16} /></button>
+              <div style={{ width: 1, height: 20, background: '#333', margin: '0 4px' }} />
+              <button className="tuf-try-btn" onClick={handleRun} disabled={submitting}>
+                {submitting ? 'Running...' : 'Run'}
+              </button>
+              <button className="tuf-submit-btn" onClick={handleSubmit} disabled={submitting}>
+                {submitting ? 'Judging...' : 'Submit'}
+              </button>
             </div>
           </div>
           
           <div className="monaco-wrapper">
             <Editor
               height="100%"
-              language={language}
+              language={language === 'cpp' ? 'cpp' : language === 'c' ? 'c' : language}
               theme="vs-dark"
               value={code}
-              onChange={(value) => setCode(value)}
-              options={{ fontSize: 13, minimap: { enabled: false }, scrollBeyondLastLine: false, padding: { top: 10 } }}
+              onChange={(value) => {
+                setCode(value);
+                setSavedCode(prev => ({ ...prev, [language]: value }));
+              }}
+              options={{
+                fontSize: 14,
+                fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace",
+                fontLigatures: true,
+                minimap: { enabled: false },
+                scrollBeyondLastLine: false,
+                padding: { top: 12, bottom: 12 },
+                lineNumbers: 'on',
+                renderLineHighlight: 'all',
+                cursorBlinking: 'smooth',
+                cursorSmoothCaretAnimation: 'on',
+                smoothScrolling: true,
+                tabSize: 4,
+                wordWrap: 'off',
+                automaticLayout: true,
+                bracketPairColorization: { enabled: true },
+                suggestOnTriggerCharacters: true,
+                quickSuggestions: true,
+                acceptSuggestionOnEnter: 'on',
+                formatOnPaste: true,
+                formatOnType: true,
+              }}
             />
           </div>
         </div>
@@ -383,27 +493,54 @@ const Workspace = () => {
                 </div>
               )}
               {result && !submitting && (
-                <div className={`result-summary ${result.success ? 'success' : 'fail'}`}>
+                <div className={`result-summary ${result.status === 'Accepted' ? 'success' : 'fail'}`}>
+                  {/* Status badge row */}
                   <div className="result-badge">
-                    <span className="result-icon">{result.success ? '✓' : '✗'}</span>
-                    <span className="result-message">{result.message}</span>
+                    <span className="result-icon">{result.status === 'Accepted' ? '✓' : '✗'}</span>
+                    <span className="result-message">{result.status}</span>
                   </div>
-                  {result.results?.map((r, i) => (
-                    <div key={i} className={`case-result ${r.passed ? 'pass' : 'fail'}`}>
-                      <div className="case-result-header">
-                        {r.passed ? '✓' : '✗'} Case {i + 1}
+
+                  {/* Stats row — runtime + test case count */}
+                  <div style={{ display: 'flex', gap: 16, padding: '0 16px 12px 16px', flexWrap: 'wrap' }}>
+                    <div style={{ background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: 8, padding: '8px 16px', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      <span style={{ fontSize: '0.7rem', color: '#555', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Test Cases</span>
+                      <span style={{ fontSize: '1rem', fontWeight: 700, color: result.status === 'Accepted' ? '#10b981' : '#ef4444', fontFamily: 'JetBrains Mono, monospace' }}>
+                        {result.passed} / {result.total}
+                      </span>
+                    </div>
+                    {result.runtimeMs > 0 && (
+                      <div style={{ background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: 8, padding: '8px 16px', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <span style={{ fontSize: '0.7rem', color: '#555', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Runtime</span>
+                        <span style={{ fontSize: '1rem', fontWeight: 700, color: '#ffd700', fontFamily: 'JetBrains Mono, monospace' }}>
+                          {result.runtimeMs} ms
+                        </span>
                       </div>
-                      {r.error ? (
-                        <div className="case-error"><pre>{r.error}</pre></div>
+                    )}
+                    <div style={{ background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: 8, padding: '8px 16px', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      <span style={{ fontSize: '0.7rem', color: '#555', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Language</span>
+                      <span style={{ fontSize: '1rem', fontWeight: 700, color: '#a78bfa', fontFamily: 'JetBrains Mono, monospace' }}>
+                        {language === 'cpp' ? 'C++ 17' : language === 'python' ? 'Python 3' : language === 'java' ? 'Java' : 'C'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Failed case detail */}
+                  {result.failedCase && (
+                    <div className="case-result fail">
+                      <div className="case-result-header">
+                        ✗ Failed Test Case
+                      </div>
+                      {result.status === 'Compilation Error' || result.status === 'Runtime Error' || result.status === 'Time Limit Exceeded' ? (
+                        <div className="case-error"><pre>{result.failedCase.got}</pre></div>
                       ) : (
                         <div className="case-io">
-                          <div><span>Input:</span> <code>{r.input}</code></div>
-                          <div><span>Expected:</span> <code>{r.expected}</code></div>
-                          <div><span>Got:</span> <code>{r.actual}</code></div>
+                          <div><span>Input:</span> <code>{result.failedCase.input}</code></div>
+                          <div><span>Expected:</span> <code>{result.failedCase.expected}</code></div>
+                          <div><span>Got:</span> <code>{result.failedCase.got}</code></div>
                         </div>
                       )}
                     </div>
-                  ))}
+                  )}
                 </div>
               )}
             </div>

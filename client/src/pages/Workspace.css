@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap');
+
 .workspace-container.tuf-style {
   display: flex;
   flex-direction: row;
@@ -5,6 +7,7 @@
   padding: 8px;
   background: #0a0a0a;
   box-sizing: border-box;
+  font-family: 'Inter', sans-serif;
 }
 
 .workspace-left {
@@ -41,6 +44,12 @@
   border-radius: 8px 8px 0 0;
   padding: 4px 8px;
   gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tuf-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .tab-btn {
@@ -49,6 +58,8 @@
   font-weight: 500;
   border-radius: 6px;
   color: #888;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .tab-btn.active {
@@ -106,39 +117,85 @@
   justify-content: space-between;
 }
 
+/* Editor header top bar */
+.lang-selector {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .tuf-select {
-  background: transparent;
-  color: #ccc;
-  border: none;
-  font-size: 0.85rem;
+  background: #252525;
+  color: #e2e8f0;
+  border: 1px solid #333;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
   cursor: pointer;
   outline: none;
+  padding: 5px 10px;
+  font-family: 'JetBrains Mono', monospace;
+  transition: border-color 0.2s, background 0.2s;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  padding-right: 28px;
+}
+
+.tuf-select:hover {
+  border-color: #555;
+  background-color: #2a2a2a;
+}
+
+.tuf-select:focus {
+  border-color: #ffd700;
+}
+
+.tuf-select option {
+  background: #1a1a1a;
+  color: #e2e8f0;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 .editor-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 
 .tuf-submit-btn {
   background: linear-gradient(135deg, #22c55e, #16a34a);
   color: white;
-  padding: 8px 16px;
+  padding: 6px 18px;
   border-radius: 6px;
   font-weight: 600;
-  font-size: 0.85rem;
-  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+  font-size: 0.82rem;
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.25);
+  transition: all 0.2s;
+  letter-spacing: 0.3px;
+}
+
+.tuf-submit-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(34, 197, 94, 0.4);
 }
 
 .tuf-try-btn {
-  background: #f59e0b;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
   color: #000;
-  padding: 6px 16px;
+  padding: 6px 18px;
   border-radius: 6px;
-  font-weight: 600;
-  font-size: 0.85rem;
-  margin-right: 8px;
+  font-weight: 700;
+  font-size: 0.82rem;
+  transition: all 0.2s;
+  letter-spacing: 0.3px;
+}
+
+.tuf-try-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
 }
 
 .workspace-right {
@@ -194,7 +251,21 @@
 .monaco-wrapper {
   flex: 1;
   background: #1e1e1e;
+  min-height: 0;
+  overflow: hidden;
 }
+
+/* Language color indicator dot in the header */
+.lang-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.lang-dot.cpp    { background: #0fa5e9; }
+.lang-dot.c      { background: #6366f1; }
+.lang-dot.python { background: #f59e0b; }
+.lang-dot.java   { background: #ef4444; }
 
 .run-btn-tuf {
   background: #2a2a2a;
@@ -455,3 +526,41 @@ details p {
   background: #2a2a2a;
   color: #ccc;
 }
+
+/* ─── Dry Run Full-Page Mode ─────────────────────────────────────────────── */
+/* When Dry Run is active, the right panel and resizer are hidden */
+.workspace-container.dryrun-fullpage .horizontal-resizer-handle,
+.workspace-container.dryrun-fullpage .workspace-right {
+  display: none !important;
+}
+
+.workspace-container.dryrun-fullpage .workspace-left {
+  width: 100% !important;
+  flex: 1 1 100% !important;
+}
+
+.workspace-container.dryrun-fullpage .bottom-meta {
+  display: none;
+}
+
+.workspace-container.dryrun-fullpage .problem-content.tuf-card {
+  padding: 0;
+  overflow: hidden; /* Let visualizer handle scroll */
+}
+
+.dryrun-view {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  height: 100%;
+}
+
+/* Ensure the left panel stretches correctly */
+.workspace-container.dryrun-fullpage .workspace-left {
+  width: 100% !important;
+  flex: 1 1 100% !important;
+  padding: 0;
+}
+

@@ -20,10 +20,12 @@ app.get('/', (req, res) => {
 const problemRoutes = require('./routes/problems');
 const authRoutes = require('./routes/auth');
 const submissionRoutes = require('./routes/submissions');
+const visualizeRoutes = require('./routes/visualize');
 
 app.use('/api/problems', problemRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/submit', submissionRoutes);
+app.use('/api/visualize', visualizeRoutes);
 
 // Database Connection
 mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/prepstack')

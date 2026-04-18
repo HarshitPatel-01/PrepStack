@@ -22,6 +22,12 @@ const userSchema = new mongoose.Schema({
       ref: 'Problem',
     }
   ],
+  problemNotes: [
+    {
+      problemId: { type: mongoose.Schema.Types.ObjectId, ref: 'Problem' },
+      notes: String
+    }
+  ],
   createdAt: {
     type: Date,
     default: Date.now,

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Lock, Mail, User, Loader2 } from 'lucide-react';
+import { apiUrl } from '../lib/api';
 import './Auth.css';
 
 const Register = () => {
@@ -19,7 +20,7 @@ const Register = () => {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:5000/api/auth/register', {
+      const response = await fetch(apiUrl('/auth/register'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, email, password })
