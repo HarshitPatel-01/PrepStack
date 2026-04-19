@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: prepstack-db
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - prepstack-network
+
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: prepstack-server
+    ports:
+      - "5000:5000"
+    environment:
+      - MONGO_URI=${MONGO_URI}
+      - PORT=5000
+      - JWT_SECRET=supersecretkey
+    depends_on:
+      - mongodb
+    networks:
+      - prepstack-network
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock # For Docker-in-Docker execution if needed
+
+networks:
+  prepstack-network:
+    driver: bridge
+
+volumes:
+  mongodb_data:
