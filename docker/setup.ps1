@@ -8,7 +8,8 @@ Write-Host ""
 Write-Host "[1/3] Checking Docker..." -ForegroundColor Yellow
 $dockerCheck = docker info 2>&1
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "ERROR: Docker is not running. Please start Docker Desktop first." -ForegroundColor Red
+    Write-Host "ERROR: Docker is not running or not accessible. Please start Docker Desktop first." -ForegroundColor Red
+    Write-Host "Details: $dockerCheck" -ForegroundColor DarkGray
     exit 1
 }
 Write-Host "      Docker is running " -ForegroundColor Green -NoNewline
